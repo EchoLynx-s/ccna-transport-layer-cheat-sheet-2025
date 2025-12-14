@@ -1317,4 +1317,121 @@ Correct answer:
 
 > I understand how **Layer 4 port numbers** let a single host run many networked applications at once. I can explain and use **socket pairs (`IP:port, IP:port`)** to distinguish individual TCP/UDP conversations, and I know the difference between **well‑known (0–1023), registered (1024–49151), and dynamic/ephemeral (49152–65535)** port ranges. I’m comfortable mapping key services to their ports (e.g. 80/443 web, 20/21 FTP, 22 SSH, 25 SMTP, 53 DNS, 67/68 DHCP, 69 TFTP) and using tools like **`netstat`** to inspect active connections and troubleshoot or detect suspicious traffic.
 
+# 14.5 TCP Communication Process
+
+> Focus of this section: how TCP servers use ports, and how TCP connections are **created (3-way handshake)** and **closed (session termination)**.  
+> This is the “life-cycle” of a TCP session.
+
+---
+
+## 14.5.1 TCP Server Processes
+
+### What is a TCP server process?
+
+- On a server, **each networked application** (web server, mail server, etc.) is bound to a **specific TCP port**.
+- Examples from the module:
+  - HTTP server → **TCP port 80**
+  - SMTP mail server → **TCP port 25**
+- The OS lets only **one server process per port** (per IP) listen at a time.  
+  You can’t have two different apps both “owning” TCP port 80 on the same host.
+
+When a client wants a service:
+
+1. The client app asks the OS to open a TCP connection.
+2. The OS chooses a **dynamic source port** (for example 49152 or 51152).
+3. The client sends a segment to:
+   - Source: `client_IP : dynamic_port`
+   - Destination: `server_IP : well_known_port` (80, 25, etc.)
+4. On the server, the TCP stack:
+   - Sees the destination port (80 or 25),
+   - Delivers the segment to the correct **listening server process**.
+
+A server can handle **many clients at once**.  
+Even though HTTP always listens on TCP 80, each active connection is uniquely identified by a **socket pair**:
+
+```text
+(client_IP, client_port, server_IP, server_port)
+```
+
+The **source port on the client** works like a **return address**, so the server’s reply can be routed back to the correct client process.
+
+---
+
+### Key facts for the exam
+
+- TCP server processes **bind to well-known or registered ports** (HTTP 80, SMTP 25, etc.).
+- Clients use **dynamic source ports** to start connections.
+- An OS will not allow **two different server apps to listen on the same TCP port** at the same time.
+- Each connection is tracked by a **4-tuple (socket pair)**:
+  `source IP, source port, destination IP, destination port`.
+- A server can have **many simultaneous TCP connections** open for one service (many clients to the same port).
+
+---
+
+### How I’d explain this to a recruiter
+
+> “I understand how TCP servers use ports. A web server binds to TCP port 80 and a mail server to port 25, and each client connection is uniquely identified by the socket pair: client IP/port plus server IP/port. The client uses a dynamic source port as its return address, and the OS ensures that only one process listens on a given port, while still allowing hundreds of simultaneous client sessions.”
+
+---
+
+## 14.5.2 TCP Connection Establishment (3-Way Handshake)
+
+TCP is **connection-oriented**.  
+Before any application data is exchanged, the two hosts perform the **3-way handshake** to:
+
+- Confirm that both sides are reachable.
+- Agree on **initial sequence numbers**.
+- Set up state on both hosts to track the conversation.
+
+### The 3-way handshake
+
+Let’s call the client **A** and the server **B**.
+
+1. **Step 1 – SYN**  
+   - A → B: `SYN` segment  
+   - Contains A’s initial sequence number (for example **SEQ = 100**).  
+   - Means: “I’d like to start a TCP session and my first sequence number is 100.”
+
+2. **Step 2 – SYN-ACK**  
+   - B receives the SYN and, if it’s willing to accept the connection:
+   - B → A: `SYN, ACK`  
+   - Example: **SEQ = 300, ACK = 101**  
+     - `SYN` flag: “Here is my starting sequence number (300).”
+     - `ACK = 101`: “I successfully received your SYN with SEQ 100, next byte I expect is 101.”
+
+3. **Step 3 – ACK**  
+   - A receives the SYN-ACK:
+   - A → B: `ACK`  
+   - Example: **SEQ = 101, ACK = 301**  
+     - `ACK = 301`: “I received your SYN with SEQ 300; next byte I expect is 301.”
+   - After this third packet, both sides transition to the **ESTABLISHED** state.
+
+ASCII timeline:
+
+```text
+A → B : SYN        SEQ = 100
+B → A : SYN, ACK   SEQ = 300, ACK = 101
+A → B : ACK        SEQ = 101, ACK = 301   (connection ESTABLISHED)
+```
+
+Now the two hosts can send application data with those sequence numbers.
+
+---
+
+### Key facts for the exam
+
+- TCP is **connection-oriented** and uses a **3-way handshake** (SYN → SYN-ACK → ACK).
+- The handshake:
+  - **Establishes a session** between client and server.
+  - **Synchronizes sequence numbers** in both directions.
+  - Confirms that both hosts are **ready to exchange data**.
+- After the handshake succeeds, both sides enter the **ESTABLISHED** state.
+
+---
+
+### How I’d explain this to a recruiter
+
+> “Before any TCP data flows, the endpoints perform the 3-way handshake. The client sends a SYN with its initial sequence number, the server replies with a SYN-ACK that both acknowledges the client and advertises its own sequence number, and the client sends a final ACK. That exchange sets up state on both sides so they can track sequence numbers and deliver a reliable, ordered byte stream.”
+
+---
 
