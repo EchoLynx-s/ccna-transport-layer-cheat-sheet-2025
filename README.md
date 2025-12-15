@@ -1319,8 +1319,8 @@ Correct answer:
 
 # 14.5 TCP Communication Process
 
-> Focus of this section: how TCP servers use ports, and how TCP connections are **created (3-way handshake)** and **closed (session termination)**.  
-> This is the “life-cycle” of a TCP session.
+> Goal of this section: understand how **TCP applications use ports**, how a **TCP connection is established (3‑way handshake)**, and how it is **terminated (4‑step FIN sequence)**.  
+> This is basically the *life‑cycle* of a TCP session.
 
 ---
 
@@ -1328,110 +1328,616 @@ Correct answer:
 
 ### What is a TCP server process?
 
-- On a server, **each networked application** (web server, mail server, etc.) is bound to a **specific TCP port**.
-- Examples from the module:
-  - HTTP server → **TCP port 80**
+- On a server, **each networked application** (web, mail, SSH, …) is bound to a **specific TCP port number**.
+- Examples from the module server:
+  - HTTP web server → **TCP port 80**
   - SMTP mail server → **TCP port 25**
-- The OS lets only **one server process per port** (per IP) listen at a time.  
-  You can’t have two different apps both “owning” TCP port 80 on the same host.
+- The OS allows **one listening server process per (IP, port)**.
+- A server can have **many ports open at the same time**, one per service (e.g. 80 for HTTP, 25 for SMTP, 22 for SSH, …).
 
-When a client wants a service:
+When a TCP server application is **configured to use a port and is running**, we say that the **port is open**. The TCP stack on the server listens for incoming segments that have:
 
-1. The client app asks the OS to open a TCP connection.
-2. The OS chooses a **dynamic source port** (for example 49152 or 51152).
-3. The client sends a segment to:
-   - Source: `client_IP : dynamic_port`
-   - Destination: `server_IP : well_known_port` (80, 25, etc.)
-4. On the server, the TCP stack:
-   - Sees the destination port (80 or 25),
-   - Delivers the segment to the correct **listening server process**.
+- destination IP = one of the server’s IP addresses
+- destination port = the port number that application is bound to
 
-A server can handle **many clients at once**.  
-Even though HTTP always listens on TCP 80, each active connection is uniquely identified by a **socket pair**:
+Any segment that matches that (IP, port) tuple is handed to that server process.
 
-```text
-(client_IP, client_port, server_IP, server_port)
-```
+---
 
-The **source port on the client** works like a **return address**, so the server’s reply can be routed back to the correct client process.
+### Clients sending TCP requests (tab: *Clients Sending TCP Requests*)
+
+Example from the figure:
+
+- **Client 1** wants web services from the server.
+- **Client 2** wants email services from the same server.
+- The server has two applications:
+  - HTTP server listening on **TCP 80**
+  - SMTP server listening on **TCP 25**
+
+Each client builds a TCP segment with:
+
+- source IP = client IP
+- destination IP = server IP
+- destination port = **80 (HTTP)** or **25 (SMTP)** depending on service
+
+This is how a single TCP server can **support multiple services** at once.
+
+---
+
+### Request destination ports (tab: *Request Destination Ports*)
+
+- Clients use **well‑known destination ports** to request services:
+  - Web browsing → destination port **80**
+  - Email (SMTP) → destination port **25**
+- Well‑known ports allow clients to **know where to send** their requests without extra configuration.
+
+In the figure:
+
+- Client 1 sends: **source port 49152 → destination port 80** (HTTP).
+- Client 2 sends: **source port 51152 → destination port 25** (SMTP).
+
+---
+
+### Request source ports (tab: *Request Source Ports*)
+
+- Client OSs choose a **dynamic (ephemeral) source port** for each new TCP conversation.
+- These ports typically come from the **dynamic/private range 49 152–65 535**.
+- The source port uniquely identifies **which application/process** on the client started the conversation.
+
+In the example:
+
+- Client 1 dynamic source port = **49152**
+- Client 2 dynamic source port = **51152**
+
+Because the server sees both **source IP + source port**, it can keep **multiple simultaneous TCP conversations** from the same or different clients separate.
+
+---
+
+### Response destination ports (tab: *Response Destination Ports*)
+
+When the server responds, it **swaps the ports** compared to the original request:
+
+- For the HTTP reply:
+  - source port = **80**
+  - destination port = **49152** (client 1’s source port)
+- For the SMTP reply:
+  - source port = **25**
+  - destination port = **51152** (client 2’s source port)
+
+So the **destination port in the response** is the **client’s original source port**. This tells the client’s TCP stack **which local application** should receive the data.
+
+---
+
+### Response source ports (tab: *Response Source Ports*)
+
+- The **source port in the server’s response** is the **server’s application port** (80 or 25).
+- This means each direction of the TCP conversation uses the **same port pair**, just swapped:
+
+Example HTTP flow:
+
+- Client → Server: `49152 → 80`
+- Server → Client: `80 → 49152`
+
+Example SMTP flow:
+
+- Client → Server: `51152 → 25`
+- Server → Client: `25 → 51152`
+
+The combination **(source IP, source port, dest IP, dest port)** is called a **TCP socket pair** and uniquely identifies each conversation.
+
+---
+
+### Check‑your‑understanding mapping (14.5.1)
+
+**Q:** Which of the following would be valid source and destination ports for a host connecting to an email server?  
+**A:** **Source: 49152, Destination: 25**  
+- Source must be a **dynamic client port**.  
+- Destination must be **SMTP’s well‑known port 25**.
 
 ---
 
 ### Key facts for the exam
 
-- TCP server processes **bind to well-known or registered ports** (HTTP 80, SMTP 25, etc.).
-- Clients use **dynamic source ports** to start connections.
-- An OS will not allow **two different server apps to listen on the same TCP port** at the same time.
-- Each connection is tracked by a **4-tuple (socket pair)**:
-  `source IP, source port, destination IP, destination port`.
-- A server can have **many simultaneous TCP connections** open for one service (many clients to the same port).
+- **Server applications listen on well‑known ports** (e.g. 80, 25, 443, 22).  
+- **Client applications use dynamic source ports** so they can open many simultaneous TCP connections.  
+- A **socket pair** `(src IP, src port, dst IP, dst port)` uniquely identifies a TCP conversation.  
+- Replies **swap source and destination ports** compared to the original request.
 
 ---
 
 ### How I’d explain this to a recruiter
 
-> “I understand how TCP servers use ports. A web server binds to TCP port 80 and a mail server to port 25, and each client connection is uniquely identified by the socket pair: client IP/port plus server IP/port. The client uses a dynamic source port as its return address, and the OS ensures that only one process listens on a given port, while still allowing hundreds of simultaneous client sessions.”
+> “On the transport layer I understand the client‑server port model. Server applications listen on well‑known TCP ports like 80 (HTTP) and 25 (SMTP). Clients initiate connections from random high‑numbered ports, and the 4‑tuple of source IP/port and destination IP/port uniquely identifies each TCP session. That lets one server host many services and thousands of simultaneous client connections safely.”
 
 ---
 
-## 14.5.2 TCP Connection Establishment (3-Way Handshake)
+## 14.5.2 TCP Connection Establishment (3‑Way Handshake)
 
-TCP is **connection-oriented**.  
-Before any application data is exchanged, the two hosts perform the **3-way handshake** to:
+TCP is **connection‑oriented**. Before data can flow, both hosts must agree to start a session and **synchronize sequence numbers**. This is done using the **three‑way handshake** with the **SYN** and **ACK** control flags.
 
-- Confirm that both sides are reachable.
-- Agree on **initial sequence numbers**.
-- Set up state on both hosts to track the conversation.
+### Step 1 – SYN
 
-### The 3-way handshake
+- The client wants to talk to the server.
+- It sends a **TCP segment with the SYN flag set** and an **Initial Sequence Number (ISN)**.  
+- Example in the module:
+  - Host A → Host B: `SEQ = 100`, `CTL = SYN`
 
-Let’s call the client **A** and the server **B**.
+This says, “I want to start a connection, and I’ll start counting my bytes from sequence 100.”
 
-1. **Step 1 – SYN**  
-   - A → B: `SYN` segment  
-   - Contains A’s initial sequence number (for example **SEQ = 100**).  
-   - Means: “I’d like to start a TCP session and my first sequence number is 100.”
+### Step 2 – SYN + ACK
 
-2. **Step 2 – SYN-ACK**  
-   - B receives the SYN and, if it’s willing to accept the connection:
-   - B → A: `SYN, ACK`  
-   - Example: **SEQ = 300, ACK = 101**  
-     - `SYN` flag: “Here is my starting sequence number (300).”
-     - `ACK = 101`: “I successfully received your SYN with SEQ 100, next byte I expect is 101.”
+- The server receives the SYN and decides to accept the connection.
+- It sends back a single segment with **both SYN and ACK flags set**:
+  - Acknowledges the client’s ISN (`ACK = client ISN + 1`).
+  - Sends its own ISN as the new sequence number.
+- Example:
+  - Host B → Host A: `SEQ = 300`, `ACK = 101`, `CTL = SYN, ACK`
 
-3. **Step 3 – ACK**  
-   - A receives the SYN-ACK:
-   - A → B: `ACK`  
-   - Example: **SEQ = 101, ACK = 301**  
-     - `ACK = 301`: “I received your SYN with SEQ 300; next byte I expect is 301.”
-   - After this third packet, both sides transition to the **ESTABLISHED** state.
+This says, “I got your SYN, here is my SYN back, and I acknowledge your starting sequence.”
 
-ASCII timeline:
+### Step 3 – ACK
 
-```text
-A → B : SYN        SEQ = 100
-B → A : SYN, ACK   SEQ = 300, ACK = 101
-A → B : ACK        SEQ = 101, ACK = 301   (connection ESTABLISHED)
-```
+- The client receives the SYN + ACK.
+- It sends a final segment with the **ACK flag set** (no SYN this time):
+  - `ACK = server ISN + 1`
+- Example:
+  - Host A → Host B: `SEQ = 101`, `ACK = 301`, `CTL = ACK`
 
-Now the two hosts can send application data with those sequence numbers.
+Now **both sides have acknowledged each other’s ISNs**, and the TCP connection is **established**.
+
+---
+
+### Check‑your‑understanding mapping (14.5.2)
+
+**Q:** Which control bit flags are used during the three‑way handshake?  
+**A:** **SYN and ACK**.  
+- First segment: SYN  
+- Second segment: SYN + ACK  
+- Third segment: ACK
 
 ---
 
 ### Key facts for the exam
 
-- TCP is **connection-oriented** and uses a **3-way handshake** (SYN → SYN-ACK → ACK).
-- The handshake:
-  - **Establishes a session** between client and server.
-  - **Synchronizes sequence numbers** in both directions.
-  - Confirms that both hosts are **ready to exchange data**.
-- After the handshake succeeds, both sides enter the **ESTABLISHED** state.
+- TCP uses a **3‑step handshake**: **SYN → SYN+ACK → ACK**.  
+- This handshake:
+  - Verifies that the **destination host is reachable**.  
+  - Confirms that the **service port is listening**.  
+  - **Synchronizes sequence numbers** in both directions.  
+- The **SYN flag** starts a connection, and the **ACK flag** is used for acknowledgements throughout the session.
 
 ---
 
 ### How I’d explain this to a recruiter
 
-> “Before any TCP data flows, the endpoints perform the 3-way handshake. The client sends a SYN with its initial sequence number, the server replies with a SYN-ACK that both acknowledges the client and advertises its own sequence number, and the client sends a final ACK. That exchange sets up state on both sides so they can track sequence numbers and deliver a reliable, ordered byte stream.”
+> “I understand the TCP three‑way handshake: the client sends SYN, the server replies with SYN‑ACK, and the client finishes with ACK. That process proves both hosts are reachable, confirms the service port is listening, and synchronizes sequence numbers so the rest of the conversation can be tracked reliably.”
 
 ---
 
+## 14.5.3 Session Termination (4‑Segment FIN Sequence)
+
+To close a TCP connection cleanly, the **FIN (Finish)** control flag is used. Each direction of the full‑duplex TCP session is closed **independently**, so terminating one TCP conversation requires **four segments** – two in each direction.
+
+### Step 1 – FIN (client → server)
+
+- When the client has no more data to send, it sends a segment with the **FIN flag set**.  
+- Example: Host A → Host B: **FIN**
+
+This says, “I’m done sending data in this direction.”
+
+### Step 2 – ACK (server → client)
+
+- The server acknowledges the FIN:
+  - Host B → Host A: **ACK**
+
+Now the client knows the server received the request to close this direction.
+
+### Step 3 – FIN (server → client)
+
+- When the server has also finished sending data, it sends its own **FIN**:
+  - Host B → Host A: **FIN**
+
+This starts closing the reverse direction of the TCP session.
+
+### Step 4 – ACK (client → server)
+
+- Finally, the client acknowledges that second FIN:
+  - Host A → Host B: **ACK**
+
+At this point, **both directions** of the TCP session are closed.
+
+> Summary: **FIN → ACK → FIN → ACK** (4 segments, often called “two 2‑way handshakes”).
+
+---
+
+### Check‑your‑understanding mapping (14.5.3)
+
+**Q:** How many exchanges are needed to end both sessions between two hosts?  
+**A:** **Four exchanges** (FIN, ACK, FIN, ACK).
+
+---
+
+### Key facts for the exam
+
+- TCP uses **FIN + ACK** segments to **gracefully close** a session.  
+- The connection is **full‑duplex**; each direction is closed separately, which is why we need 4 segments.  
+- A separate control flag **RST (Reset)** can be used to **abruptly terminate** a connection when an error occurs or a connection is invalid.
+
+---
+
+### How I’d explain this to a recruiter
+
+> “I know TCP terminates connections gracefully with a four‑segment FIN sequence: FIN, ACK, FIN, ACK. That allows each direction of the full‑duplex channel to close cleanly. In troubleshooting tools like Wireshark, I can recognise a healthy TCP teardown versus an abnormal reset (RST).”
+
+---
+
+## 14.5.4 TCP Three‑Way Handshake Analysis & Control Bits
+
+This subsection explains what information TCP tracks during a conversation and how **control bits (flags)** show the state of a connection.
+
+### What the 3‑way handshake achieves
+
+From the module:
+
+1. **Confirms the destination is present on the network.**
+2. **Verifies the destination has an active service** listening on the requested port and is accepting new connections.
+3. **Informs the destination** that the client intends to establish a communication session on that port.
+
+Combined with sequence and acknowledgement numbers, this lets TCP:
+
+- Maintain **state information** for each session.
+- Track **every data segment** within that session.
+- Know what data has been **successfully received** and what may need **retransmission**.
+
+### Control bits (flags) in the TCP header
+
+The TCP header has a 6‑bit **Control Bits** field. Each bit is a **flag** that can be on (1) or off (0). The six key flags are:
+
+- **URG** – Urgent pointer field significant (data marked as urgent).  
+- **ACK** – Acknowledgement flag; used in connection establishment and throughout the session to confirm receipt.  
+- **PSH** – Push function; asks the receiver to pass data to the application immediately (don’t buffer).  
+- **RST** – Reset; abruptly resets a connection when there is an error or invalid connection attempt.  
+- **SYN** – Synchronise sequence numbers; used to establish a connection (3‑way handshake).  
+- **FIN** – Finish; indicates no more data from the sender and is used in session termination.
+
+When you analyse traffic (for example, in **Wireshark**), you can read these flags to see **where in the connection lifecycle** each segment belongs (setup, data transfer, or teardown).
+
+---
+
+### Key facts for the exam
+
+- TCP is **stateful**: it remembers sequence/ack numbers and connection state using fields in the header.  
+- The **Control Bits field** provides the flags that define connection behaviour (SYN, ACK, FIN, RST, PSH, URG).  
+- The three‑way handshake and four‑segment termination are **just specific sequences of these flags**.
+
+---
+
+### How I’d explain this to a recruiter
+
+> “Beyond just ‘TCP is reliable’, I understand how the protocol tracks state. Sequence and acknowledgement numbers plus control flags like SYN, ACK, FIN, and RST tell you exactly where a connection is in its life‑cycle. I’m comfortable reading those flags in tools like Wireshark to troubleshoot connectivity and application issues.”
+
+---
+
+## 14.5.5 Wireshark View of the TCP 3‑Way Handshake & Termination (Video Summary)
+
+The video in the module walks through **Wireshark captures** of both the 3‑way handshake and the termination of a TCP conversation.
+
+### Handshake in Wireshark
+
+- The capture shows a classic **3‑packet sequence**:
+  1. **SYN**
+  2. **SYN, ACK**
+  3. **ACK**
+- In the packet list, you see these as consecutive packets (for example, packets 10, 11, and 12).
+
+**Initial Sequence Number (ISN)**
+
+- In reality, the ISN is a **32‑bit random number** chosen at the start of each new TCP conversation.  
+- This randomness helps defend against **TCP connection hijacking attacks**.  
+- **Wireshark simplifies analysis** by displaying **“relative sequence numbers”**:
+  - It treats the first observed sequence number as **0**.
+  - All later sequence and acknowledgement numbers are shown relative to that, making flows easier to follow.
+
+In the details pane for the SYN packet you can see:
+
+- `Sequence number: 0 (relative)`
+- Flags with **SYN = 1**, others 0.
+
+In the SYN+ACK packet you can see:
+
+- `Ack number: 1 (relative)` acknowledging the client’s SYN.  
+- A new sequence number 0 from the server (relative, for the reverse direction).  
+- Flags with **SYN = 1, ACK = 1**.
+
+In the final ACK packet you see:
+
+- `Ack number: 1` acknowledging the server’s SYN.  
+- Flags with **ACK = 1**, SYN cleared.
+
+### Termination in Wireshark
+
+Later in the capture, the video shows **how the TCP connection ends**:
+
+1. The server sends a segment with **FIN + ACK** set.  
+2. The client replies with an **ACK** (acknowledging the FIN).  
+3. The client then sends its own **FIN + ACK**.  
+4. The server finishes with a final **ACK**.
+
+This appears as **two back‑to‑back two‑way handshakes** (FIN/ACK, FIN/ACK). In Wireshark, the flags field clearly shows **FIN = 1** when the teardown begins, and acknowledgements continue until the final ACK.
+
+You may notice that acknowledgement numbers are much higher by this point (for example in the 300‑plus range), because they reflect **all bytes that have been successfully transferred** during the session.
+
+---
+
+### Key facts for the exam
+
+- Wireshark uses **relative sequence numbers** to make TCP flows readable.  
+- The TCP 3‑way handshake is clearly visible as **SYN → SYN,ACK → ACK**.  
+- Termination shows **FIN + ACK** sequences in **both directions**.  
+- Flags plus sequence/ack numbers are your best indicators of **connection state** when troubleshooting.
+
+---
+
+### How I’d explain this to a recruiter
+
+> “I’ve practised reading TCP handshakes directly in Wireshark. I can identify SYN, SYN‑ACK, ACK when connections start, and FIN/ACK sequences when they close. I also understand how Wireshark uses relative sequence numbers, and I can use those values plus flags to trace issues like half‑open connections or unexpected resets.”
+
+---
+
+## 14.5.6 Check Your Understanding – TCP Communication Process (Q&A)
+
+A few quick exam‑style checks from this section:
+
+1. **Valid source/destination ports for a host connecting to an email server?**  
+   - ✅ **Correct:** `Source: 49152, Destination: 25`  
+   - Reason: clients use **dynamic high ports** as the source, and SMTP listens on **TCP 25**.
+
+2. **Which control bit flags are used during the three‑way handshake?**  
+   - ✅ **Correct:** **SYN and ACK**  
+   - Reason: the handshake is **SYN → SYN,ACK → ACK**.
+
+3. **How many exchanges are needed to end both sessions between two hosts?**  
+   - ✅ **Correct:** **Four exchanges**  
+   - Reason: TCP teardown uses **FIN, ACK, FIN, ACK** – two segments in each direction.
+
+---
+
+## 14.5 Big‑Picture Recap
+
+- TCP communication life‑cycle:
+  1. **Server processes** listen on well‑known ports.  
+  2. **Clients initiate** connections from dynamic ports using the **3‑way SYN/SYN‑ACK/ACK handshake**.  
+  3. Data is transferred reliably using **sequence numbers, acknowledgements, and control flags**.  
+  4. The session ends cleanly using a **four‑segment FIN/ACK sequence**.
+
+---
+
+### How I’d summarise this section on my CV / to a recruiter
+
+> “I’m comfortable working at the transport layer. I understand how TCP uses ports and socket pairs to multiplex many client/server conversations, how the three‑way handshake and flags like SYN/ACK/FIN establish and track connection state, and how to recognise normal versus abnormal TCP setups and teardowns in packet captures. That helps me troubleshoot connectivity issues and reason precisely about how applications use the network.”
+
+
+
+---
+
+# CCNA: Introduction to Networks – Module 14  
+## Section 14.6 – Reliability and Flow Control (TCP) – Study & Recruiter Notes (2025)
+
+**Author:** EchoLynx  
+**Course:** Cisco NetAcad – *Introduction to Networks*  
+**Module:** 14 – *Transport Layer*  
+**Section:** 14.6 – *Reliability and Flow Control*  
+**Status:** ✅ Completed – theory + videos
+
+---
+
+## 1. Why this section matters
+
+TCP is not just “another protocol on top of IP.”  
+In this section I studied **how TCP guarantees reliable, ordered delivery** and **how it controls the rate of data flow** so that neither side is overloaded:
+
+- How **sequence numbers** and **acknowledgements (ACKs)** allow a receiver to reassemble data and detect loss.  
+- How TCP **retransmits** segments when loss happens (classic and selective acknowledgement).  
+- How TCP implements **flow control** using **window size** and **maximum segment size (MSS)**.
+
+These mechanisms are the reason why applications like web browsing, file transfer and email can trust the network to deliver data **completely and in order**, even across an unreliable IP network.
+
+---
+
+## 2. 14.6.1 – TCP Reliability: Guaranteed and Ordered Delivery
+
+### 2.1 Sequence numbers and ISN
+
+Every TCP connection maintains a **byte‑oriented sequence space**:
+
+- Each byte in the stream is numbered; the **Sequence Number** in the TCP header identifies *“first byte of data in this segment”*.
+- During session setup, each side chooses an **Initial Sequence Number (ISN)**:
+  - 32‑bit value, effectively a random number.
+  - Protects against old segments or TCP hijacking attacks.
+- As data is transmitted, the sequence number is incremented by the number of data bytes sent.
+
+This means the receiver can:
+
+1. **Detect missing data** (a “gap” in sequence numbers).  
+2. **Reorder out‑of‑order segments** into the original sequence before passing data to the application.
+
+> Example: If bytes 1–1460 arrive, then 2921–4380, the receiver knows bytes 1461–2920 are missing and can hold the later segments until the gap is filled.
+
+### 2.2 Reordering at the destination
+
+Because IP is connectionless, **segments may take different routes** and arrive out of order. TCP fixes this:
+
+- The receiving host stores segments in a **reassembly buffer**.
+- Segments are placed according to their **sequence numbers**.
+- Once all bytes up to the next expected position have arrived, data is passed up to the application.
+
+So even when the network delivers segments in the order `1, 2, 6, 5, 4, 3`, TCP gives the application data in the correct order: `1, 2, 3, 4, 5, 6`.
+
+---
+
+## 3. 14.6.2 – Video: TCP Reliability – Sequence Numbers and ACKs (summary)
+
+The video reinforces three key ideas:
+
+1. **Connection‑oriented:**  
+   A TCP connection is established first using the **three‑way handshake** before data is exchanged.
+
+2. **Sequence numbers:**  
+   - Every segment is tagged with a sequence number.  
+   - This allows the receiver to rebuild the ordered data stream and spot out‑of‑order or missing data.
+
+3. **Acknowledgements (ACKs) and window size:**  
+   - The receiver returns **ACKs** containing the **next expected byte number**.  
+   - The **window size** is the total number of unacknowledged bytes the sender is allowed to have “in flight”.  
+   - The sender must **not exceed the advertised window**; this is how TCP prevents overwhelming the receiver.
+
+> Example from the video (simplified):  
+> - Sender: “Starting at byte 1, I’m sending 10 bytes.” (window size 10)  
+> - Receiver: “I received bytes 1–10. I expect byte 11 next.” → `ACK = 11`  
+> - Sender then sends bytes 11–20. Receiver answers with `ACK = 21`, etc.
+
+Modern TCP implementations support large windows (tens of megabytes or more) using **window scaling**, but the logic is the same.
+
+---
+
+## 4. 14.6.3 – TCP Reliability: Data Loss and Retransmission
+
+Even in a well‑designed network, **packets get lost**. TCP uses its reliability mechanisms to detect this and recover.
+
+### 4.1 Classical retransmission with cumulative ACKs
+
+TCP uses **cumulative acknowledgements**:
+
+- ACK `N` means *“I have received every byte up to N‑1; N is the next byte I expect.”*
+- If some segments are lost, the receiver keeps ACKing the **same number**, indicating it is still waiting for that byte.
+
+**Example (numbering segments instead of bytes for clarity):**
+
+1. Host A sends segments `1, 2, 3, 4, 5, 6, 7, 8, 9, 10`.  
+2. Segments `3` and `4` are lost in transit.  
+3. Host B receives `1, 2, 5, 6, 7, 8, 9, 10` but detects the gap after segment 2.  
+4. Host B sends **`ACK 3`**, meaning “I have everything up to segment 2; I expect 3 next.”  
+5. Without more advanced features, Host A must **retransmit segments 3–10**, which creates **duplicate segments** and wastes bandwidth.
+
+### 4.2 Selective Acknowledgement (SACK)
+
+Modern TCP stacks commonly support **Selective Acknowledgement (SACK)**, negotiated during the three‑way handshake.
+
+With SACK:
+
+- The receiver can explicitly acknowledge **non‑contiguous blocks** of data:
+  - “I have 1–2 (ACK 3) and also 5–10 (SACK 5–10).”
+- The sender only needs to retransmit the **missing pieces** (here, segments 3 and 4).
+
+Benefits:
+
+- Less unnecessary retransmission.  
+- More efficient use of bandwidth and reduced congestion.  
+- Faster recovery from loss.
+
+### 4.3 Timers and retransmission (video summary)
+
+The second video shows the **timeout and retransmission** process:
+
+1. Sender transmits a segment and **starts a timer**.  
+2. If an ACK is received **before** the timer expires → OK, send next segment.  
+3. If **no ACK** arrives before timeout → sender **retransmits** that segment and restarts the timer.
+
+This continues until all segments are acknowledged.  
+TCP typically doesn’t ACK every single segment; it often ACKs **every second segment** or uses **delayed ACKs**, depending on the implementation.
+
+---
+
+## 5. 14.6.5 – TCP Flow Control: Window Size and ACKs
+
+TCP also implements **flow control** so the sender does not overload the receiver.
+
+### 5.1 Window size field
+
+- The TCP header contains a 16‑bit **Window Size** field.  
+- It represents the number of bytes the receiver is currently willing to accept beyond the last acknowledged byte.  
+- The **sender must obey this advertised window**.
+
+**Example from the course figure:**
+
+- During the three‑way handshake, PC B advertises an initial window size of **10,000 bytes**.  
+- This means PC A may send up to 10,000 bytes before it *must* receive an ACK.  
+- As PC B processes data and frees up buffer space, it continues to send ACKs with updated window sizes.
+
+This behaviour is called a **sliding window**:
+
+- As the sender receives ACKs like `ACK 2921, window 10,000`, it knows:  
+  - “The receiver has successfully received bytes up to 2920 and can still accept 10,000 more bytes.”  
+- The sender’s *send window* slides forward as data is acknowledged.
+
+### 5.2 Dynamic adjustment
+
+The receiver can adjust the advertised window depending on available buffer space:
+
+- If the receiver becomes **busy or low on memory**, it can **shrink** the window to slow the sender.  
+- If it has plenty of free buffer space, it can advertise a **larger** window to allow more data in flight.
+
+Modern TCP implementations use sliding windows plus algorithms like **congestion control** (e.g., slow start, congestion avoidance). Congestion control is mainly about the **network path**, while the window size field is about **receiver capacity**—but both influence how much data is sent.
+
+> Note: Many stacks ACK approximately every second full‑sized segment rather than literally every packet. The exact behaviour can vary.
+
+---
+
+## 6. 14.6.6 – TCP Flow Control: Maximum Segment Size (MSS)
+
+Besides window size, TCP uses **Maximum Segment Size (MSS)** to control how large each segment’s payload can be.
+
+### 6.1 MSS basics
+
+- **MSS** = maximum number of **data bytes** a device can receive in a single TCP segment.  
+- MSS does **not** include TCP or IP header bytes.  
+- MSS is usually negotiated in the **options field** during the three‑way handshake.
+
+### 6.2 Relationship with MTU
+
+On Ethernet with IPv4:
+
+- **MTU (Maximum Transmission Unit)** = 1500 bytes (default).  
+- IPv4 header = 20 bytes.  
+- TCP header = 20 bytes.  
+- Therefore, a common MSS is:
+
+  ```text
+  MSS = 1500 (MTU) – 20 (IPv4 header) – 20 (TCP header) = 1460 bytes
+  ```
+
+Choosing MSS correctly prevents **IP fragmentation** and improves performance.
+
+---
+
+## 7. Key facts for the exam
+
+Quick points I keep in mind:
+
+- TCP provides **reliable, ordered, connection‑oriented** delivery using:
+  - Sequence numbers  
+  - Acknowledgements (ACKs)  
+  - Timers and retransmissions  
+  - Flow control (window size, MSS)
+- **ISN (Initial Sequence Number)** is a 32‑bit random starting point for sequence numbers; helps against TCP hijacking and old segments.  
+- Receivers reorder out‑of‑order segments using **sequence numbers and a reassembly buffer**.  
+- With classic cumulative ACKs, loss of a segment causes repeated ACK of the missing byte; sender may retransmit a **range** of segments.  
+- **Selective ACK (SACK)** allows the receiver to inform the sender exactly which ranges were received so only the **missing segments** are resent.  
+- **Window Size field** = how many additional bytes the receiver is ready to accept beyond the last ACKed byte. This is core to TCP **flow control**.  
+- **Sliding window**: window position (and size) moves forward as ACKs arrive; sender keeps the number of unacknowledged bytes ≤ advertised window.  
+- **MSS** is negotiated during the three‑way handshake and typically equals **MTU – IP header – TCP header** (often 1460 bytes on Ethernet/IPv4).
+
+---
+
+## 8. How I’d explain this to a recruiter
+
+> “In Module 14.6 I went deeper into how TCP makes unreliable IP networks look reliable to applications. I understand how TCP numbers every byte with sequence numbers, buffers and reorders segments that arrive out of order, and uses ACKs plus timers to detect and retransmit lost data. I also studied selective acknowledgements (SACK), which let modern TCP stacks retransmit only the missing ranges instead of resending everything.  
+>  
+> On the flow‑control side, I can interpret the TCP window size and MSS fields in packet captures. I know how the advertised receive window and sliding window mechanism prevent senders from overwhelming a receiver, and how MSS is chosen based on the path MTU (for example, 1460‑byte MSS on Ethernet with IPv4). This helps me reason about performance issues like retransmissions, duplicate segments or poor throughput when troubleshooting real networks.”
+
+---
+
+### File info
+
+- **Filename:** `ccna-module-14-section-14.6-reliability-and-flow-control-2025.md`  
+- **Purpose:** Personal CCNA study notes + portfolio evidence of networking fundamentals knowledge.
