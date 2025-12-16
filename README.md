@@ -1941,3 +1941,1483 @@ Quick points I keep in mind:
 
 - **Filename:** `ccna-module-14-section-14.6-reliability-and-flow-control-2025.md`  
 - **Purpose:** Personal CCNA study notes + portfolio evidence of networking fundamentals knowledge.
+
+
+
+
+
+# 14.6 Reliability and Flow Control (TCP)
+
+> Extracted + structured notes from your screenshots (14.6.1 → 14.6.6) + your pasted video transcripts.
+
+---
+
+## 14.6.1 TCP Reliability — Guaranteed and Ordered Delivery
+
+TCP can be a better protocol for some applications because, unlike UDP:
+- It **resends dropped packets**.
+- It **numbers packets** so data can be delivered in the **proper order**.
+- It can also help **maintain the flow of packets** so devices do not become overloaded.
+
+### Why sequence numbers matter
+Sometimes TCP segments:
+- **do not arrive** at the destination, or
+- **arrive out of order**.
+
+For the original message to be understood, **all data must be received** and then **reassembled** in the original order.
+
+**Sequence numbers** are assigned in the header of each packet to achieve this.
+- The **sequence number represents the first data byte** of the TCP segment.
+
+### ISN (Initial Sequence Number)
+During session setup, an **initial sequence number (ISN)** is set:
+- It represents the **starting value** of the bytes transmitted to the receiving application.
+- As data is transmitted, the sequence number is **incremented by the number of bytes transmitted**.
+- This byte tracking lets each segment be **uniquely identified and acknowledged**, and helps identify **missing segments**.
+
+The ISN does **not** begin at 1 — it’s effectively a **random number** (helps prevent certain types of malicious attacks).
+- For simplicity, the examples use **ISN = 1**.
+
+---
+
+## Figure — TCP Segments Are Reordered at the Destination
+
+- **Different segments may take different routes.**
+- **Data is divided into segments** (Segment 1, 2, 3, 4, 5, 6).
+- Because of different routes, segments can **arrive out of order**.
+- TCP then **reorders the segments to the original order**.
+
+### What the receiver does
+The receiving TCP process:
+- places data from a segment into a **receiving buffer**,
+- puts segments in the **proper sequence order**,
+- then passes data to the **application layer** once reassembled.
+
+Segments with out-of-order sequence numbers are **held** for later processing.
+When missing bytes arrive, the buffered segments are processed **in order**.
+
+---
+
+## 14.6.2 Video — TCP Reliability: Sequence Numbers and Acknowledgements
+
+**On-screen description (from the page):**
+- One function of TCP is to ensure each segment reaches its destination.
+- The destination host’s TCP services **acknowledge** data received by the source application.
+- The lesson focuses on TCP **sequence numbers** and **acknowledgements**.
+
+### Video 1 transcript (your pasted text)
+
+00:04 - [Speaker] This video depicts a simplified example  
+00:07 of TCP operations.  
+00:10 It is not necessarily a realistic depiction.  
+00:13 TCP is a connection-oriented protocol.  
+00:16 In that, a connection is established first  
+00:19 using a three-way handshake before data is sent.  
+00:22 Another characteristic of TCP  
+00:25 is that it's a reliable protocol.  
+00:27 Two things that make it reliable are sequence numbers  
+00:31 and acknowledgements.  
+00:32 Every TCP segment that's sent in a TCP conversation  
+00:36 gets a sequence number.  
+00:38 So every byte of data is numbered  
+00:41 basically in a sequential list.  
+00:43 This allows a receiving host to rebuild the data  
+00:46 from the ordered numbered segments.  
+00:49 If data arrives out of order at the receiving end,  
+00:53 the data can be put back together in the proper order  
+00:56 thanks to the sequence numbers.  
+00:59 Acknowledgements come into play by helping the sender know  
+01:03 that the data that's being sent is actually being received.  
+01:08 The way this works is, the sending host sends TCP segments  
+01:12 in bytes, and the receiving host acknowledges bytes received  
+01:16 by sending acknowledgements.  
+01:19 There is a limit to the amount of data  
+01:20 the sending host can send before it receives  
+01:23 an acknowledgement from the receiver.  
+01:26 This amount is called the window size.  
+01:28 The window size is the total number of bytes  
+01:31 sent in TCP segments that can be sent  
+01:35 before receiving an acknowledgement.  
+01:37 Using TCP window scaling, computers are able to achieve  
+01:41 large window sizes of up to one gigabyte.  
+01:45 So as the sending host sends bytes of data in TCP segments,  
+01:49 the receiving host returns acknowledgements as it processes  
+01:54 bytes received, and frees up its buffers.  
+01:58 We can see this depicted in this graphic.  
+02:01 Let's start by reading the message  
+02:04 from the sending host here.  
+02:06 Start with byte number one; I am sending 10 bytes.  
+02:10 In this scenario, the 10 bytes is the window size.  
+02:15 In reality the window size would be a lot larger  
+02:18 than 10 bytes, since today window sizes are typically  
+02:21 16 megabytes or larger.  
+02:23 But this works nicely for this example.  
+02:28 So the host is sending 10 bytes,  
+02:30 starting with byte number one.  
+02:32 The receiving host, the server here, says:  
+02:35 I received 10 bytes, starting with byte number one.  
+02:39 I expect byte 11 next.  
+02:42 This is the acknowledgement.  
+02:45 The server acknowledges it received the 10 bytes  
+02:48 and now is expecting number 11.  
+02:52 If we look down here, we can see that in this segment  
+02:56 starting with sequence number one, 10 bytes have been sent.  
+03:01 The receiver sends an Ack 11.  
+03:05 Starting with one, 10 bytes were sent  
+03:08 so the next sequence number it's expecting is an 11.  
+03:12 This acknowledgement is sent back to the originating host.  
+03:17 Now the originating host sends 10 more bytes  
+03:21 starting with sequence number 11.  
+03:24 If we were to ask ourselves, what would be the next Ack  
+03:28 that the server would send back to the originating host?  
+03:33 We would have to ask ourselves:  
+03:34 What's the last sequence number sent?  
+03:37 Starting with 11, 10 bytes were sent,  
+03:41 so the last sequence number that was sent was 20.  
+03:44 So the Ack would be an Ack 21.  
+03:48 That's the next expected sequence number.  
+03:52 You can see how sequence numbers and acknowledgements  
+03:56 including the window size, make TCP a very orderly  
+04:01 and reliable protocol.
+
+---
+
+## 14.6.3 TCP Reliability — Data Loss and Retransmission
+
+No matter how well designed a network is, **data loss occasionally occurs**.
+TCP provides methods to manage segment losses, including a mechanism to **retransmit segments for unacknowledged data**.
+
+### SEQ + ACK work together (expectational acknowledgement)
+- The **sequence (SEQ) number** identifies the **first byte of data** in the segment being transmitted.
+- The **acknowledgement (ACK) number** is sent back to the source to indicate the **next byte expected**.
+- This is called **expectational acknowledgement**.
+
+### Before enhancements (why duplicates happened)
+Earlier TCP behavior could only acknowledge the **next byte expected**.
+
+Example (using segment numbers for simplicity):
+- Host A sends segments **1 through 10** to host B.
+- If all segments arrive **except 3 and 4**, host B replies with an acknowledgement saying the next expected is **segment 3**.
+- Host A cannot know which later segments arrived, so it may resend **segments 3 through 10**.
+- If the resent segments arrive successfully, segments **5 through 10** become **duplicates** → can cause **delays, congestion, and inefficiencies**.
+
+### SACK (Selective Acknowledgement)
+Many operating systems use optional **SACK**, negotiated during the **three-way handshake**.
+If both hosts support SACK:
+- the receiver can explicitly acknowledge which segments (bytes) were received, including **discontinuous segments**,
+- the sender only needs to retransmit the **missing** data.
+
+Example:
+- Host A sends segments **1 through 10**.
+- If everything arrives except **3 and 4**, host B can:
+  - acknowledge segments 1 and 2 (**ACK 3**),
+  - selectively acknowledge segments 5 through 10 (**SACK 5–10**).
+- Host A then only needs to resend **segments 3 and 4**.
+
+**Note:** TCP typically sends ACKs for **every other packet**, but other factors may alter this behavior.
+
+TCP uses **timers** to decide how long to wait before resending a segment.
+(The page notes a video + PDF examining TCP data loss and retransmission.)
+
+---
+
+## 14.6.4 Video — TCP Reliability: Data Loss and Retransmission
+
+**On-screen description (from the page):**
+- Click Play to view a lesson on TCP retransmission.
+- The video shows the process of resending segments not initially received by the destination.
+
+### Video 2 transcript (your pasted text)
+
+00:00 - The graphic depicted in this video  
+00:03 uses segment numbers in place of sequence numbers.  
+00:07 TCP is a reliable protocol.  
+00:09 It uses sequence numbers, and acknowledgements  
+00:12 to provide that reliability.  
+00:15 But, what happens when data is lost in transit?  
+00:19 As a reliable protocol,  
+00:21 there has to be a mechanism for resending lost data,  
+00:25 so that an entire piece of data,  
+00:27 like a file, or an image, or a video can be rebuilt  
+00:32 from all of the segments.  
+00:34 If we look at this animation,  
+00:37 we can see this process in action.  
+00:39 I'll press play.  
+00:41 The source host here sends segment 1 and starts a timer.  
+00:46 You can see the timer's running.  
+00:49 The destination host receives segment 1.  
+00:54 And, since it's received segment 1,  
+00:56 it's going to send an acknowledgement.  
+00:58 Let's see what happens.  
+01:01 We can see that the destination host  
+01:03 has received segment 1, acknowledges the delivery,  
+01:08 and is going to send an act 2, an acknowledgement 2,  
+01:12 requesting number 2.  
+01:13 Why?  
+01:15 It received 1, so it sends a request for 2,  
+01:17 and an act 2.  
+01:19 So, we'll see that get sent.  
+01:21 All right, there goes the acknowledgement.  
+01:23 The source receives the acknowledgement  
+01:26 before the timer expires, and now can send segment 2.  
+01:29 There's segment 2, it's sent,  
+01:33 and as you can see, the timer has started.  
+01:36 It's going to wait to get an acknowledgement.  
+01:39 If it doesn't receive an acknowledgement  
+01:43 from the destination before the timer expires,  
+01:47 it will resend segment 2.  
+01:49 Let's see this in action.  
+01:52 You can see the destination has not received segment 2.  
+01:57 Since it hasn't received segment 2,  
+02:00 it won't send an acknowledgement number 3  
+02:03 back to the device.  
+02:06 It's not going to acknowledge that it received 2,  
+02:09 and send an act 3 back to the source host.  
+02:11 Let's see what happens.  
+02:14 No acknowledgement, the timer expires.  
+02:17 You can see here the timer expires.  
+02:20 So, what will the source host do?  
+02:22 The source host will retransmit, or resend segmeent 2,  
+02:27 and restart the timer.  
+02:30 This time, the information was received  
+02:34 by the destination, and now  
+02:36 it's going to send an act 3,  
+02:38 or acknowledgement 3,  
+02:40 requesting the next piece of data,  
+02:42 which in this case would be number 3.  
+02:47 The acknowledgement's received before the timer expires,  
+02:52 and segment 3 is sent.  
+02:54 Segment 3 is received, acknowledged,  
+02:58 and a request for 4 is sent in an acknowledgement.  
+03:02 The acknowledgement is received  
+03:03 before the timer expires,  
+03:05 and now the device can send segment 4.  
+03:08 Or, in this case, it's the end of the transmission.  
+03:11 The ability of TCP to retransmit missing segments  
+03:15 makes applications that use the TCP protocol very reliable.
+
+---
+
+## 14.6.5 TCP Flow Control — Window Size and Acknowledgements
+
+Flow control = how much data the destination can receive and process reliably.
+
+TCP maintains reliability by adjusting the **rate of data flow** between source and destination for a session.
+- TCP includes a **16-bit field** in the header called the **window size**.
+
+### Window size + ACK number
+- **Window size** determines how many bytes can be sent before expecting an acknowledgement.
+- **Acknowledgement number** is the **next expected byte**.
+
+In the example:
+- PC B initial window size = **10,000 bytes**.
+- Starting at byte 1, the last byte PC A can send without receiving an acknowledgement is byte **10,000**.
+  - This is the **send window** of PC A.
+- Window size is included in every TCP segment so the destination can **modify** it anytime depending on buffer availability.
+
+### How the sliding window “moves”
+The initial window is agreed during the **three-way handshake**.
+The source must limit bytes sent based on the destination’s window size.
+
+Typically, the destination will **not wait** until all 10,000 bytes are received before replying with an acknowledgement.
+As bytes are processed, acknowledgements inform the source it can continue sending.
+
+Example:
+- When PC A receives an acknowledgement with ACK number **2,921** (next expected byte),
+  - PC A’s send window increments **2,920 bytes**,
+  - send window changes from **10,000** → **12,920**,
+  - PC A can now send **another 10,000 bytes** as long as it does not exceed the new send window at 12,920.
+
+This continual adjustment is called **sliding windows**.
+
+If the destination’s buffer space decreases, it can **reduce window size** to tell the source to reduce how many bytes it sends without an ACK.
+
+**Note:** Receivers often send an ACK after every **two segments**, but this can vary.
+Sliding windows allow continuous sending as long as the receiver acknowledges previous segments.
+
+---
+
+## 14.6.6 TCP Flow Control — Maximum Segment Size (MSS)
+
+In the example, each TCP segment carries **1,460 bytes of data**:
+- This is typically the **Maximum Segment Size (MSS)** the destination can receive.
+- MSS is an option in the TCP header specifying the largest amount of **data (bytes)** a device can receive in a single TCP segment.
+- **MSS does not include the TCP header**.
+- MSS is typically included during the **three-way handshake**.
+
+### Common MSS calculation (IPv4 on Ethernet)
+A common MSS is **1,460 bytes** when using IPv4:
+- Ethernet default **MTU = 1500 bytes**
+- Subtract:
+  - IPv4 header = **20 bytes**
+  - TCP header = **20 bytes**
+- Result:
+  - MSS = **1460 bytes** payload
+
+Diagram idea:
+- Ethernet | IPv4 (20 bytes) | TCP (20 bytes) | Payload (1460 bytes) | FCS  
+- Total: **1500 bytes**
+
+---
+
+## Quick key terms (fast review)
+- **Sequence Number**: first data byte number in a TCP segment.
+- **ISN**: initial sequence number; typically random.
+- **ACK Number**: next byte expected by the receiver.
+- **Retransmission Timer**: sender timer used to resend unacknowledged data.
+- **SACK**: selective acknowledgement (acknowledge received ranges so sender only retransmits missing parts).
+- **Window Size**: how many bytes can be sent before an ACK is required (flow control).
+- **Sliding Window**: dynamic movement/adjustment of the send window based on ACKs.
+- **MSS**: max payload bytes per TCP segment (often MTU − IP header − TCP header).
+- **MTU**: maximum size of an IP packet on a link (commonly 1500 bytes on Ethernet).
+
+
+# 14.6 Reliability and Flow Control (TCP)
+
+> Extracted + structured notes from your screenshots (14.6.1 → 14.6.6) + your pasted video transcripts.
+
+---
+
+## 14.6.1 TCP Reliability — Guaranteed and Ordered Delivery
+
+TCP can be a better protocol for some applications because, unlike UDP:
+- It **resends dropped packets**.
+- It **numbers packets** so data can be delivered in the **proper order**.
+- It can also help **maintain the flow of packets** so devices do not become overloaded.
+
+### Why sequence numbers matter
+Sometimes TCP segments:
+- **do not arrive** at the destination, or
+- **arrive out of order**.
+
+For the original message to be understood, **all data must be received** and then **reassembled** in the original order.
+
+**Sequence numbers** are assigned in the header of each packet to achieve this.
+- The **sequence number represents the first data byte** of the TCP segment.
+
+### ISN (Initial Sequence Number)
+During session setup, an **initial sequence number (ISN)** is set:
+- It represents the **starting value** of the bytes transmitted to the receiving application.
+- As data is transmitted, the sequence number is **incremented by the number of bytes transmitted**.
+- This byte tracking lets each segment be **uniquely identified and acknowledged**, and helps identify **missing segments**.
+
+The ISN does **not** begin at 1 — it’s effectively a **random number** (helps prevent certain types of malicious attacks).
+- For simplicity, the examples use **ISN = 1**.
+
+---
+
+## Figure — TCP Segments Are Reordered at the Destination
+
+- **Different segments may take different routes.**
+- **Data is divided into segments** (Segment 1, 2, 3, 4, 5, 6).
+- Because of different routes, segments can **arrive out of order**.
+- TCP then **reorders the segments to the original order**.
+
+### What the receiver does
+The receiving TCP process:
+- places data from a segment into a **receiving buffer**,
+- puts segments in the **proper sequence order**,
+- then passes data to the **application layer** once reassembled.
+
+Segments with out-of-order sequence numbers are **held** for later processing.
+When missing bytes arrive, the buffered segments are processed **in order**.
+
+---
+
+## 14.6.2 Video — TCP Reliability: Sequence Numbers and Acknowledgements
+
+**On-screen description (from the page):**
+- One function of TCP is to ensure each segment reaches its destination.
+- The destination host’s TCP services **acknowledge** data received by the source application.
+- The lesson focuses on TCP **sequence numbers** and **acknowledgements**.
+
+### Video 1 transcript (your pasted text)
+
+00:04 - [Speaker] This video depicts a simplified example  
+00:07 of TCP operations.  
+00:10 It is not necessarily a realistic depiction.  
+00:13 TCP is a connection-oriented protocol.  
+00:16 In that, a connection is established first  
+00:19 using a three-way handshake before data is sent.  
+00:22 Another characteristic of TCP  
+00:25 is that it's a reliable protocol.  
+00:27 Two things that make it reliable are sequence numbers  
+00:31 and acknowledgements.  
+00:32 Every TCP segment that's sent in a TCP conversation  
+00:36 gets a sequence number.  
+00:38 So every byte of data is numbered  
+00:41 basically in a sequential list.  
+00:43 This allows a receiving host to rebuild the data  
+00:46 from the ordered numbered segments.  
+00:49 If data arrives out of order at the receiving end,  
+00:53 the data can be put back together in the proper order  
+00:56 thanks to the sequence numbers.  
+00:59 Acknowledgements come into play by helping the sender know  
+01:03 that the data that's being sent is actually being received.  
+01:08 The way this works is, the sending host sends TCP segments  
+01:12 in bytes, and the receiving host acknowledges bytes received  
+01:16 by sending acknowledgements.  
+01:19 There is a limit to the amount of data  
+01:20 the sending host can send before it receives  
+01:23 an acknowledgement from the receiver.  
+01:26 This amount is called the window size.  
+01:28 The window size is the total number of bytes  
+01:31 sent in TCP segments that can be sent  
+01:35 before receiving an acknowledgement.  
+01:37 Using TCP window scaling, computers are able to achieve  
+01:41 large window sizes of up to one gigabyte.  
+01:45 So as the sending host sends bytes of data in TCP segments,  
+01:49 the receiving host returns acknowledgements as it processes  
+01:54 bytes received, and frees up its buffers.  
+01:58 We can see this depicted in this graphic.  
+02:01 Let's start by reading the message  
+02:04 from the sending host here.  
+02:06 Start with byte number one; I am sending 10 bytes.  
+02:10 In this scenario, the 10 bytes is the window size.  
+02:15 In reality the window size would be a lot larger  
+02:18 than 10 bytes, since today window sizes are typically  
+02:21 16 megabytes or larger.  
+02:23 But this works nicely for this example.  
+02:28 So the host is sending 10 bytes,  
+02:30 starting with byte number one.  
+02:32 The receiving host, the server here, says:  
+02:35 I received 10 bytes, starting with byte number one.  
+02:39 I expect byte 11 next.  
+02:42 This is the acknowledgement.  
+02:45 The server acknowledges it received the 10 bytes  
+02:48 and now is expecting number 11.  
+02:52 If we look down here, we can see that in this segment  
+02:56 starting with sequence number one, 10 bytes have been sent.  
+03:01 The receiver sends an Ack 11.  
+03:05 Starting with one, 10 bytes were sent  
+03:08 so the next sequence number it's expecting is an 11.  
+03:12 This acknowledgement is sent back to the originating host.  
+03:17 Now the originating host sends 10 more bytes  
+03:21 starting with sequence number 11.  
+03:24 If we were to ask ourselves, what would be the next Ack  
+03:28 that the server would send back to the originating host?  
+03:33 We would have to ask ourselves:  
+03:34 What's the last sequence number sent?  
+03:37 Starting with 11, 10 bytes were sent,  
+03:41 so the last sequence number that was sent was 20.  
+03:44 So the Ack would be an Ack 21.  
+03:48 That's the next expected sequence number.  
+03:52 You can see how sequence numbers and acknowledgements  
+03:56 including the window size, make TCP a very orderly  
+04:01 and reliable protocol.
+
+---
+
+## 14.6.3 TCP Reliability — Data Loss and Retransmission
+
+No matter how well designed a network is, **data loss occasionally occurs**.
+TCP provides methods to manage segment losses, including a mechanism to **retransmit segments for unacknowledged data**.
+
+### SEQ + ACK work together (expectational acknowledgement)
+- The **sequence (SEQ) number** identifies the **first byte of data** in the segment being transmitted.
+- The **acknowledgement (ACK) number** is sent back to the source to indicate the **next byte expected**.
+- This is called **expectational acknowledgement**.
+
+### Before enhancements (why duplicates happened)
+Earlier TCP behavior could only acknowledge the **next byte expected**.
+
+Example (using segment numbers for simplicity):
+- Host A sends segments **1 through 10** to host B.
+- If all segments arrive **except 3 and 4**, host B replies with an acknowledgement saying the next expected is **segment 3**.
+- Host A cannot know which later segments arrived, so it may resend **segments 3 through 10**.
+- If the resent segments arrive successfully, segments **5 through 10** become **duplicates** → can cause **delays, congestion, and inefficiencies**.
+
+### SACK (Selective Acknowledgement)
+Many operating systems use optional **SACK**, negotiated during the **three-way handshake**.
+If both hosts support SACK:
+- the receiver can explicitly acknowledge which segments (bytes) were received, including **discontinuous segments**,
+- the sender only needs to retransmit the **missing** data.
+
+Example:
+- Host A sends segments **1 through 10**.
+- If everything arrives except **3 and 4**, host B can:
+  - acknowledge segments 1 and 2 (**ACK 3**),
+  - selectively acknowledge segments 5 through 10 (**SACK 5–10**).
+- Host A then only needs to resend **segments 3 and 4**.
+
+**Note:** TCP typically sends ACKs for **every other packet**, but other factors may alter this behavior.
+
+TCP uses **timers** to decide how long to wait before resending a segment.
+(The page notes a video + PDF examining TCP data loss and retransmission.)
+
+---
+
+## 14.6.4 Video — TCP Reliability: Data Loss and Retransmission
+
+**On-screen description (from the page):**
+- Click Play to view a lesson on TCP retransmission.
+- The video shows the process of resending segments not initially received by the destination.
+
+### Video 2 transcript (your pasted text)
+
+00:00 - The graphic depicted in this video  
+00:03 uses segment numbers in place of sequence numbers.  
+00:07 TCP is a reliable protocol.  
+00:09 It uses sequence numbers, and acknowledgements  
+00:12 to provide that reliability.  
+00:15 But, what happens when data is lost in transit?  
+00:19 As a reliable protocol,  
+00:21 there has to be a mechanism for resending lost data,  
+00:25 so that an entire piece of data,  
+00:27 like a file, or an image, or a video can be rebuilt  
+00:32 from all of the segments.  
+00:34 If we look at this animation,  
+00:37 we can see this process in action.  
+00:39 I'll press play.  
+00:41 The source host here sends segment 1 and starts a timer.  
+00:46 You can see the timer's running.  
+00:49 The destination host receives segment 1.  
+00:54 And, since it's received segment 1,  
+00:56 it's going to send an acknowledgement.  
+00:58 Let's see what happens.  
+01:01 We can see that the destination host  
+01:03 has received segment 1, acknowledges the delivery,  
+01:08 and is going to send an act 2, an acknowledgement 2,  
+01:12 requesting number 2.  
+01:13 Why?  
+01:15 It received 1, so it sends a request for 2,  
+01:17 and an act 2.  
+01:19 So, we'll see that get sent.  
+01:21 All right, there goes the acknowledgement.  
+01:23 The source receives the acknowledgement  
+01:26 before the timer expires, and now can send segment 2.  
+01:29 There's segment 2, it's sent,  
+01:33 and as you can see, the timer has started.  
+01:36 It's going to wait to get an acknowledgement.  
+01:39 If it doesn't receive an acknowledgement  
+01:43 from the destination before the timer expires,  
+01:47 it will resend segment 2.  
+01:49 Let's see this in action.  
+01:52 You can see the destination has not received segment 2.  
+01:57 Since it hasn't received segment 2,  
+02:00 it won't send an acknowledgement number 3  
+02:03 back to the device.  
+02:06 It's not going to acknowledge that it received 2,  
+02:09 and send an act 3 back to the source host.  
+02:11 Let's see what happens.  
+02:14 No acknowledgement, the timer expires.  
+02:17 You can see here the timer expires.  
+02:20 So, what will the source host do?  
+02:22 The source host will retransmit, or resend segmeent 2,  
+02:27 and restart the timer.  
+02:30 This time, the information was received  
+02:34 by the destination, and now  
+02:36 it's going to send an act 3,  
+02:38 or acknowledgement 3,  
+02:40 requesting the next piece of data,  
+02:42 which in this case would be number 3.  
+02:47 The acknowledgement's received before the timer expires,  
+02:52 and segment 3 is sent.  
+02:54 Segment 3 is received, acknowledged,  
+02:58 and a request for 4 is sent in an acknowledgement.  
+03:02 The acknowledgement is received  
+03:03 before the timer expires,  
+03:05 and now the device can send segment 4.  
+03:08 Or, in this case, it's the end of the transmission.  
+03:11 The ability of TCP to retransmit missing segments  
+03:15 makes applications that use the TCP protocol very reliable.
+
+---
+
+## 14.6.5 TCP Flow Control — Window Size and Acknowledgements
+
+Flow control = how much data the destination can receive and process reliably.
+
+TCP maintains reliability by adjusting the **rate of data flow** between source and destination for a session.
+- TCP includes a **16-bit field** in the header called the **window size**.
+
+### Window size + ACK number
+- **Window size** determines how many bytes can be sent before expecting an acknowledgement.
+- **Acknowledgement number** is the **next expected byte**.
+
+In the example:
+- PC B initial window size = **10,000 bytes**.
+- Starting at byte 1, the last byte PC A can send without receiving an acknowledgement is byte **10,000**.
+  - This is the **send window** of PC A.
+- Window size is included in every TCP segment so the destination can **modify** it anytime depending on buffer availability.
+
+### How the sliding window “moves”
+The initial window is agreed during the **three-way handshake**.
+The source must limit bytes sent based on the destination’s window size.
+
+Typically, the destination will **not wait** until all 10,000 bytes are received before replying with an acknowledgement.
+As bytes are processed, acknowledgements inform the source it can continue sending.
+
+Example:
+- When PC A receives an acknowledgement with ACK number **2,921** (next expected byte),
+  - PC A’s send window increments **2,920 bytes**,
+  - send window changes from **10,000** → **12,920**,
+  - PC A can now send **another 10,000 bytes** as long as it does not exceed the new send window at 12,920.
+
+This continual adjustment is called **sliding windows**.
+
+If the destination’s buffer space decreases, it can **reduce window size** to tell the source to reduce how many bytes it sends without an ACK.
+
+**Note:** Receivers often send an ACK after every **two segments**, but this can vary.
+Sliding windows allow continuous sending as long as the receiver acknowledges previous segments.
+
+---
+
+## 14.6.6 TCP Flow Control — Maximum Segment Size (MSS)
+
+In the example, each TCP segment carries **1,460 bytes of data**:
+- This is typically the **Maximum Segment Size (MSS)** the destination can receive.
+- MSS is an option in the TCP header specifying the largest amount of **data (bytes)** a device can receive in a single TCP segment.
+- **MSS does not include the TCP header**.
+- MSS is typically included during the **three-way handshake**.
+
+### Common MSS calculation (IPv4 on Ethernet)
+A common MSS is **1,460 bytes** when using IPv4:
+- Ethernet default **MTU = 1500 bytes**
+- Subtract:
+  - IPv4 header = **20 bytes**
+  - TCP header = **20 bytes**
+- Result:
+  - MSS = **1460 bytes** payload
+
+Diagram idea:
+- Ethernet | IPv4 (20 bytes) | TCP (20 bytes) | Payload (1460 bytes) | FCS  
+- Total: **1500 bytes**
+
+---
+
+## Quick key terms (fast review)
+- **Sequence Number**: first data byte number in a TCP segment.
+- **ISN**: initial sequence number; typically random.
+- **ACK Number**: next byte expected by the receiver.
+- **Retransmission Timer**: sender timer used to resend unacknowledged data.
+- **SACK**: selective acknowledgement (acknowledge received ranges so sender only retransmits missing parts).
+- **Window Size**: how many bytes can be sent before an ACK is required (flow control).
+- **Sliding Window**: dynamic movement/adjustment of the send window based on ACKs.
+- **MSS**: max payload bytes per TCP segment (often MTU − IP header − TCP header).
+- **MTU**: maximum size of an IP packet on a link (commonly 1500 bytes on Ethernet).
+
+
+
+---
+
+## 14.6.7 TCP Flow Control — Congestion Avoidance
+
+When **congestion** occurs on a network, it can result in packets being **discarded by an overloaded router**.
+If packets containing TCP segments do not reach the destination, they are left **unacknowledged**.
+
+By determining the rate at which TCP segments are sent but **not acknowledged**, the source can assume a certain level of network congestion.
+
+### Why congestion can get worse
+Whenever there is congestion, retransmission of lost TCP segments from the source will occur.
+If retransmission is not properly controlled:
+- additional retransmissions can make congestion **even worse**
+- not only are new packets introduced, but retransmitted packets that were lost also add to congestion
+
+To avoid and control congestion, TCP employs several **congestion-handling mechanisms, timers, and algorithms**.
+
+### What the sender does when it senses congestion
+If the source determines that TCP segments are either:
+- not being acknowledged, or
+- not being acknowledged in a timely manner,
+
+then it can **reduce the number of bytes it sends before receiving an acknowledgement**.
+
+**Key note (important):**  
+It is the **source** that reduces the number of **unacknowledged bytes** it sends — **not** the destination’s window size.
+
+#### Figure — TCP Congestion Control (simplified)
+- PC A: “I’m not getting the acknowledgements I expect from PC B so I will reduce the number of bytes I send before getting an acknowledgement.”
+- Example shows lost TCP segments and the sender reducing how much it sends before expecting ACKs.
+
+*Footnote from the figure:*  
+Acknowledgement numbers are for the **next expected byte** (not for a segment). Segment numbers are simplified for illustration.
+
+*Course note:* Details of real congestion-handling mechanisms/timers/algorithms are beyond this course scope.
+
+---
+
+## 14.6.8 Check Your Understanding — Reliability and Flow Control
+
+### Question 1
+**What field is used by the destination host to reassemble segments into the original order?**
+- Source Port  
+- Destination Port  
+- Window Size  
+- Control Bits  
+- Sequence Number  
+
+> **Answer:** Sequence Number
+
+### Question 2
+**What field is used to provide flow control?**
+- Source Port  
+- Control Bits  
+- Destination Port  
+- Sequence Number  
+- Window Size  
+
+> **Answer:** Window Size
+
+### Question 3
+**What happens when a sending host senses there is congestion?**
+- The sending host reduces the number of bytes it sends before receiving an acknowledgement from the destination host.  
+- The receiving host increases the number of bytes it sends before receiving an acknowledgement from the sending host.  
+- The receiving host reduces the number of bytes it sends before receiving an acknowledgement from the sending host.  
+- The sending host increases the number of bytes it sends before receiving an acknowledgement from the destination host.  
+
+> **Answer:** The sending host reduces the number of bytes it sends before receiving an acknowledgement from the destination host.
+
+---
+
+# 14.7 UDP Communication
+
+## 14.7.1 UDP Low Overhead versus Reliability
+
+UDP is ideal for communications that need to be **fast**, like **VoIP**.
+
+Key points:
+- UDP **does not establish a connection**.
+- UDP provides **low-overhead** data transport because it has:
+  - a **small datagram header**
+  - **no network management traffic**
+
+**Figure callout:** “UDP does not establish a connection before sending data.”
+
+---
+
+## 14.7.2 UDP Datagram Reassembly
+
+Like TCP segments, when UDP datagrams are sent to a destination, they often take different paths and arrive in the **wrong order**.
+
+However:
+- UDP does **not** track sequence numbers the way TCP does.
+- UDP has **no way** to reorder datagrams into their original transmission order.
+
+Therefore UDP:
+- reassembles data in the **order it was received**
+- forwards it to the **application**
+
+If the data sequence is important, the **application** must identify the proper sequence and determine how the data should be processed.
+
+### Figure — UDP: Connectionless and Unreliable
+- Different datagrams may take different routes.
+- Data is divided into datagrams.
+- Having taken different routes, datagrams arrive out of order.
+- **Out-of-order datagrams are not re-ordered.**
+- **Lost datagrams are not re-sent.**
+
+---
+
+## 14.7.3 UDP Server Processes and Requests
+
+UDP-based server applications are assigned **well-known or registered port numbers** (similar to TCP-based applications).
+
+When these processes are running on a server:
+- they accept data matched to their assigned port number
+- when UDP receives a datagram destined for one of these ports, it forwards the application data to the correct application based on the **port number**
+
+### Figure — UDP Server Listening for Requests
+- Client DNS requests will be received on **Port 53**
+- Client RADIUS requests will be received on **Port 1812**
+
+**Note:** The Remote Authentication Dial-In User Service (**RADIUS**) server shown provides authentication, authorization, and accounting services to manage user access. (Operation of RADIUS is beyond the scope of this course.)
+
+
+# 14.6 Reliability and Flow Control (TCP)
+
+> Extracted + structured notes from your screenshots (14.6.1 → 14.6.6) + your pasted video transcripts.
+
+---
+
+## 14.6.1 TCP Reliability — Guaranteed and Ordered Delivery
+
+TCP can be a better protocol for some applications because, unlike UDP:
+- It **resends dropped packets**.
+- It **numbers packets** so data can be delivered in the **proper order**.
+- It can also help **maintain the flow of packets** so devices do not become overloaded.
+
+### Why sequence numbers matter
+Sometimes TCP segments:
+- **do not arrive** at the destination, or
+- **arrive out of order**.
+
+For the original message to be understood, **all data must be received** and then **reassembled** in the original order.
+
+**Sequence numbers** are assigned in the header of each packet to achieve this.
+- The **sequence number represents the first data byte** of the TCP segment.
+
+### ISN (Initial Sequence Number)
+During session setup, an **initial sequence number (ISN)** is set:
+- It represents the **starting value** of the bytes transmitted to the receiving application.
+- As data is transmitted, the sequence number is **incremented by the number of bytes transmitted**.
+- This byte tracking lets each segment be **uniquely identified and acknowledged**, and helps identify **missing segments**.
+
+The ISN does **not** begin at 1 — it’s effectively a **random number** (helps prevent certain types of malicious attacks).
+- For simplicity, the examples use **ISN = 1**.
+
+---
+
+## Figure — TCP Segments Are Reordered at the Destination
+
+- **Different segments may take different routes.**
+- **Data is divided into segments** (Segment 1, 2, 3, 4, 5, 6).
+- Because of different routes, segments can **arrive out of order**.
+- TCP then **reorders the segments to the original order**.
+
+### What the receiver does
+The receiving TCP process:
+- places data from a segment into a **receiving buffer**,
+- puts segments in the **proper sequence order**,
+- then passes data to the **application layer** once reassembled.
+
+Segments with out-of-order sequence numbers are **held** for later processing.
+When missing bytes arrive, the buffered segments are processed **in order**.
+
+---
+
+## 14.6.2 Video — TCP Reliability: Sequence Numbers and Acknowledgements
+
+**On-screen description (from the page):**
+- One function of TCP is to ensure each segment reaches its destination.
+- The destination host’s TCP services **acknowledge** data received by the source application.
+- The lesson focuses on TCP **sequence numbers** and **acknowledgements**.
+
+### Video 1 transcript (your pasted text)
+
+00:04 - [Speaker] This video depicts a simplified example  
+00:07 of TCP operations.  
+00:10 It is not necessarily a realistic depiction.  
+00:13 TCP is a connection-oriented protocol.  
+00:16 In that, a connection is established first  
+00:19 using a three-way handshake before data is sent.  
+00:22 Another characteristic of TCP  
+00:25 is that it's a reliable protocol.  
+00:27 Two things that make it reliable are sequence numbers  
+00:31 and acknowledgements.  
+00:32 Every TCP segment that's sent in a TCP conversation  
+00:36 gets a sequence number.  
+00:38 So every byte of data is numbered  
+00:41 basically in a sequential list.  
+00:43 This allows a receiving host to rebuild the data  
+00:46 from the ordered numbered segments.  
+00:49 If data arrives out of order at the receiving end,  
+00:53 the data can be put back together in the proper order  
+00:56 thanks to the sequence numbers.  
+00:59 Acknowledgements come into play by helping the sender know  
+01:03 that the data that's being sent is actually being received.  
+01:08 The way this works is, the sending host sends TCP segments  
+01:12 in bytes, and the receiving host acknowledges bytes received  
+01:16 by sending acknowledgements.  
+01:19 There is a limit to the amount of data  
+01:20 the sending host can send before it receives  
+01:23 an acknowledgement from the receiver.  
+01:26 This amount is called the window size.  
+01:28 The window size is the total number of bytes  
+01:31 sent in TCP segments that can be sent  
+01:35 before receiving an acknowledgement.  
+01:37 Using TCP window scaling, computers are able to achieve  
+01:41 large window sizes of up to one gigabyte.  
+01:45 So as the sending host sends bytes of data in TCP segments,  
+01:49 the receiving host returns acknowledgements as it processes  
+01:54 bytes received, and frees up its buffers.  
+01:58 We can see this depicted in this graphic.  
+02:01 Let's start by reading the message  
+02:04 from the sending host here.  
+02:06 Start with byte number one; I am sending 10 bytes.  
+02:10 In this scenario, the 10 bytes is the window size.  
+02:15 In reality the window size would be a lot larger  
+02:18 than 10 bytes, since today window sizes are typically  
+02:21 16 megabytes or larger.  
+02:23 But this works nicely for this example.  
+02:28 So the host is sending 10 bytes,  
+02:30 starting with byte number one.  
+02:32 The receiving host, the server here, says:  
+02:35 I received 10 bytes, starting with byte number one.  
+02:39 I expect byte 11 next.  
+02:42 This is the acknowledgement.  
+02:45 The server acknowledges it received the 10 bytes  
+02:48 and now is expecting number 11.  
+02:52 If we look down here, we can see that in this segment  
+02:56 starting with sequence number one, 10 bytes have been sent.  
+03:01 The receiver sends an Ack 11.  
+03:05 Starting with one, 10 bytes were sent  
+03:08 so the next sequence number it's expecting is an 11.  
+03:12 This acknowledgement is sent back to the originating host.  
+03:17 Now the originating host sends 10 more bytes  
+03:21 starting with sequence number 11.  
+03:24 If we were to ask ourselves, what would be the next Ack  
+03:28 that the server would send back to the originating host?  
+03:33 We would have to ask ourselves:  
+03:34 What's the last sequence number sent?  
+03:37 Starting with 11, 10 bytes were sent,  
+03:41 so the last sequence number that was sent was 20.  
+03:44 So the Ack would be an Ack 21.  
+03:48 That's the next expected sequence number.  
+03:52 You can see how sequence numbers and acknowledgements  
+03:56 including the window size, make TCP a very orderly  
+04:01 and reliable protocol.
+
+---
+
+## 14.6.3 TCP Reliability — Data Loss and Retransmission
+
+No matter how well designed a network is, **data loss occasionally occurs**.
+TCP provides methods to manage segment losses, including a mechanism to **retransmit segments for unacknowledged data**.
+
+### SEQ + ACK work together (expectational acknowledgement)
+- The **sequence (SEQ) number** identifies the **first byte of data** in the segment being transmitted.
+- The **acknowledgement (ACK) number** is sent back to the source to indicate the **next byte expected**.
+- This is called **expectational acknowledgement**.
+
+### Before enhancements (why duplicates happened)
+Earlier TCP behavior could only acknowledge the **next byte expected**.
+
+Example (using segment numbers for simplicity):
+- Host A sends segments **1 through 10** to host B.
+- If all segments arrive **except 3 and 4**, host B replies with an acknowledgement saying the next expected is **segment 3**.
+- Host A cannot know which later segments arrived, so it may resend **segments 3 through 10**.
+- If the resent segments arrive successfully, segments **5 through 10** become **duplicates** → can cause **delays, congestion, and inefficiencies**.
+
+### SACK (Selective Acknowledgement)
+Many operating systems use optional **SACK**, negotiated during the **three-way handshake**.
+If both hosts support SACK:
+- the receiver can explicitly acknowledge which segments (bytes) were received, including **discontinuous segments**,
+- the sender only needs to retransmit the **missing** data.
+
+Example:
+- Host A sends segments **1 through 10**.
+- If everything arrives except **3 and 4**, host B can:
+  - acknowledge segments 1 and 2 (**ACK 3**),
+  - selectively acknowledge segments 5 through 10 (**SACK 5–10**).
+- Host A then only needs to resend **segments 3 and 4**.
+
+**Note:** TCP typically sends ACKs for **every other packet**, but other factors may alter this behavior.
+
+TCP uses **timers** to decide how long to wait before resending a segment.
+(The page notes a video + PDF examining TCP data loss and retransmission.)
+
+---
+
+## 14.6.4 Video — TCP Reliability: Data Loss and Retransmission
+
+**On-screen description (from the page):**
+- Click Play to view a lesson on TCP retransmission.
+- The video shows the process of resending segments not initially received by the destination.
+
+### Video 2 transcript (your pasted text)
+
+00:00 - The graphic depicted in this video  
+00:03 uses segment numbers in place of sequence numbers.  
+00:07 TCP is a reliable protocol.  
+00:09 It uses sequence numbers, and acknowledgements  
+00:12 to provide that reliability.  
+00:15 But, what happens when data is lost in transit?  
+00:19 As a reliable protocol,  
+00:21 there has to be a mechanism for resending lost data,  
+00:25 so that an entire piece of data,  
+00:27 like a file, or an image, or a video can be rebuilt  
+00:32 from all of the segments.  
+00:34 If we look at this animation,  
+00:37 we can see this process in action.  
+00:39 I'll press play.  
+00:41 The source host here sends segment 1 and starts a timer.  
+00:46 You can see the timer's running.  
+00:49 The destination host receives segment 1.  
+00:54 And, since it's received segment 1,  
+00:56 it's going to send an acknowledgement.  
+00:58 Let's see what happens.  
+01:01 We can see that the destination host  
+01:03 has received segment 1, acknowledges the delivery,  
+01:08 and is going to send an act 2, an acknowledgement 2,  
+01:12 requesting number 2.  
+01:13 Why?  
+01:15 It received 1, so it sends a request for 2,  
+01:17 and an act 2.  
+01:19 So, we'll see that get sent.  
+01:21 All right, there goes the acknowledgement.  
+01:23 The source receives the acknowledgement  
+01:26 before the timer expires, and now can send segment 2.  
+01:29 There's segment 2, it's sent,  
+01:33 and as you can see, the timer has started.  
+01:36 It's going to wait to get an acknowledgement.  
+01:39 If it doesn't receive an acknowledgement  
+01:43 from the destination before the timer expires,  
+01:47 it will resend segment 2.  
+01:49 Let's see this in action.  
+01:52 You can see the destination has not received segment 2.  
+01:57 Since it hasn't received segment 2,  
+02:00 it won't send an acknowledgement number 3  
+02:03 back to the device.  
+02:06 It's not going to acknowledge that it received 2,  
+02:09 and send an act 3 back to the source host.  
+02:11 Let's see what happens.  
+02:14 No acknowledgement, the timer expires.  
+02:17 You can see here the timer expires.  
+02:20 So, what will the source host do?  
+02:22 The source host will retransmit, or resend segmeent 2,  
+02:27 and restart the timer.  
+02:30 This time, the information was received  
+02:34 by the destination, and now  
+02:36 it's going to send an act 3,  
+02:38 or acknowledgement 3,  
+02:40 requesting the next piece of data,  
+02:42 which in this case would be number 3.  
+02:47 The acknowledgement's received before the timer expires,  
+02:52 and segment 3 is sent.  
+02:54 Segment 3 is received, acknowledged,  
+02:58 and a request for 4 is sent in an acknowledgement.  
+03:02 The acknowledgement is received  
+03:03 before the timer expires,  
+03:05 and now the device can send segment 4.  
+03:08 Or, in this case, it's the end of the transmission.  
+03:11 The ability of TCP to retransmit missing segments  
+03:15 makes applications that use the TCP protocol very reliable.
+
+---
+
+## 14.6.5 TCP Flow Control — Window Size and Acknowledgements
+
+Flow control = how much data the destination can receive and process reliably.
+
+TCP maintains reliability by adjusting the **rate of data flow** between source and destination for a session.
+- TCP includes a **16-bit field** in the header called the **window size**.
+
+### Window size + ACK number
+- **Window size** determines how many bytes can be sent before expecting an acknowledgement.
+- **Acknowledgement number** is the **next expected byte**.
+
+In the example:
+- PC B initial window size = **10,000 bytes**.
+- Starting at byte 1, the last byte PC A can send without receiving an acknowledgement is byte **10,000**.
+  - This is the **send window** of PC A.
+- Window size is included in every TCP segment so the destination can **modify** it anytime depending on buffer availability.
+
+### How the sliding window “moves”
+The initial window is agreed during the **three-way handshake**.
+The source must limit bytes sent based on the destination’s window size.
+
+Typically, the destination will **not wait** until all 10,000 bytes are received before replying with an acknowledgement.
+As bytes are processed, acknowledgements inform the source it can continue sending.
+
+Example:
+- When PC A receives an acknowledgement with ACK number **2,921** (next expected byte),
+  - PC A’s send window increments **2,920 bytes**,
+  - send window changes from **10,000** → **12,920**,
+  - PC A can now send **another 10,000 bytes** as long as it does not exceed the new send window at 12,920.
+
+This continual adjustment is called **sliding windows**.
+
+If the destination’s buffer space decreases, it can **reduce window size** to tell the source to reduce how many bytes it sends without an ACK.
+
+**Note:** Receivers often send an ACK after every **two segments**, but this can vary.
+Sliding windows allow continuous sending as long as the receiver acknowledges previous segments.
+
+---
+
+## 14.6.6 TCP Flow Control — Maximum Segment Size (MSS)
+
+In the example, each TCP segment carries **1,460 bytes of data**:
+- This is typically the **Maximum Segment Size (MSS)** the destination can receive.
+- MSS is an option in the TCP header specifying the largest amount of **data (bytes)** a device can receive in a single TCP segment.
+- **MSS does not include the TCP header**.
+- MSS is typically included during the **three-way handshake**.
+
+### Common MSS calculation (IPv4 on Ethernet)
+A common MSS is **1,460 bytes** when using IPv4:
+- Ethernet default **MTU = 1500 bytes**
+- Subtract:
+  - IPv4 header = **20 bytes**
+  - TCP header = **20 bytes**
+- Result:
+  - MSS = **1460 bytes** payload
+
+Diagram idea:
+- Ethernet | IPv4 (20 bytes) | TCP (20 bytes) | Payload (1460 bytes) | FCS  
+- Total: **1500 bytes**
+
+---
+
+## Quick key terms (fast review)
+- **Sequence Number**: first data byte number in a TCP segment.
+- **ISN**: initial sequence number; typically random.
+- **ACK Number**: next byte expected by the receiver.
+- **Retransmission Timer**: sender timer used to resend unacknowledged data.
+- **SACK**: selective acknowledgement (acknowledge received ranges so sender only retransmits missing parts).
+- **Window Size**: how many bytes can be sent before an ACK is required (flow control).
+- **Sliding Window**: dynamic movement/adjustment of the send window based on ACKs.
+- **MSS**: max payload bytes per TCP segment (often MTU − IP header − TCP header).
+- **MTU**: maximum size of an IP packet on a link (commonly 1500 bytes on Ethernet).
+
+
+
+---
+
+## 14.6.7 TCP Flow Control — Congestion Avoidance
+
+When **congestion** occurs on a network, it can result in packets being **discarded by an overloaded router**.
+If packets containing TCP segments do not reach the destination, they are left **unacknowledged**.
+
+By determining the rate at which TCP segments are sent but **not acknowledged**, the source can assume a certain level of network congestion.
+
+### Why congestion can get worse
+Whenever there is congestion, retransmission of lost TCP segments from the source will occur.
+If retransmission is not properly controlled:
+- additional retransmissions can make congestion **even worse**
+- not only are new packets introduced, but retransmitted packets that were lost also add to congestion
+
+To avoid and control congestion, TCP employs several **congestion-handling mechanisms, timers, and algorithms**.
+
+### What the sender does when it senses congestion
+If the source determines that TCP segments are either:
+- not being acknowledged, or
+- not being acknowledged in a timely manner,
+
+then it can **reduce the number of bytes it sends before receiving an acknowledgement**.
+
+**Key note (important):**  
+It is the **source** that reduces the number of **unacknowledged bytes** it sends — **not** the destination’s window size.
+
+#### Figure — TCP Congestion Control (simplified)
+- PC A: “I’m not getting the acknowledgements I expect from PC B so I will reduce the number of bytes I send before getting an acknowledgement.”
+- Example shows lost TCP segments and the sender reducing how much it sends before expecting ACKs.
+
+*Footnote from the figure:*  
+Acknowledgement numbers are for the **next expected byte** (not for a segment). Segment numbers are simplified for illustration.
+
+*Course note:* Details of real congestion-handling mechanisms/timers/algorithms are beyond this course scope.
+
+---
+
+## 14.6.8 Check Your Understanding — Reliability and Flow Control
+
+### Question 1
+**What field is used by the destination host to reassemble segments into the original order?**
+- Source Port  
+- Destination Port  
+- Window Size  
+- Control Bits  
+- Sequence Number  
+
+> **Answer:** Sequence Number
+
+### Question 2
+**What field is used to provide flow control?**
+- Source Port  
+- Control Bits  
+- Destination Port  
+- Sequence Number  
+- Window Size  
+
+> **Answer:** Window Size
+
+### Question 3
+**What happens when a sending host senses there is congestion?**
+- The sending host reduces the number of bytes it sends before receiving an acknowledgement from the destination host.  
+- The receiving host increases the number of bytes it sends before receiving an acknowledgement from the sending host.  
+- The receiving host reduces the number of bytes it sends before receiving an acknowledgement from the sending host.  
+- The sending host increases the number of bytes it sends before receiving an acknowledgement from the destination host.  
+
+> **Answer:** The sending host reduces the number of bytes it sends before receiving an acknowledgement from the destination host.
+
+---
+
+# 14.7 UDP Communication
+
+## 14.7.1 UDP Low Overhead versus Reliability
+
+UDP is ideal for communications that need to be **fast**, like **VoIP**.
+
+Key points:
+- UDP **does not establish a connection**.
+- UDP provides **low-overhead** data transport because it has:
+  - a **small datagram header**
+  - **no network management traffic**
+
+**Figure callout:** “UDP does not establish a connection before sending data.”
+
+---
+
+## 14.7.2 UDP Datagram Reassembly
+
+Like TCP segments, when UDP datagrams are sent to a destination, they often take different paths and arrive in the **wrong order**.
+
+However:
+- UDP does **not** track sequence numbers the way TCP does.
+- UDP has **no way** to reorder datagrams into their original transmission order.
+
+Therefore UDP:
+- reassembles data in the **order it was received**
+- forwards it to the **application**
+
+If the data sequence is important, the **application** must identify the proper sequence and determine how the data should be processed.
+
+### Figure — UDP: Connectionless and Unreliable
+- Different datagrams may take different routes.
+- Data is divided into datagrams.
+- Having taken different routes, datagrams arrive out of order.
+- **Out-of-order datagrams are not re-ordered.**
+- **Lost datagrams are not re-sent.**
+
+---
+
+## 14.7.3 UDP Server Processes and Requests
+
+UDP-based server applications are assigned **well-known or registered port numbers** (similar to TCP-based applications).
+
+When these processes are running on a server:
+- they accept data matched to their assigned port number
+- when UDP receives a datagram destined for one of these ports, it forwards the application data to the correct application based on the **port number**
+
+### Figure — UDP Server Listening for Requests
+- Client DNS requests will be received on **Port 53**
+- Client RADIUS requests will be received on **Port 1812**
+
+**Note:** The Remote Authentication Dial-In User Service (**RADIUS**) server shown provides authentication, authorization, and accounting services to manage user access. (Operation of RADIUS is beyond the scope of this course.)
+
+
+
+---
+
+## 14.7.4 UDP Client Processes
+
+Client-server communication is initiated by a **client application** requesting data from a **server process**.
+
+### How UDP chooses ports (client side)
+- The UDP client process **dynamically selects a port number** from the port range and uses it as the **source port** for the conversation.
+- The **destination port** is usually the **well-known** or **registered** port number assigned to the server process.
+
+After the client selects the source and destination ports:
+- The same pair of ports is used in the UDP header of **all datagrams** in the transaction.
+- When the server replies to the client, the **source and destination ports are reversed** in the returning datagrams.
+
+### Example shown (DNS + RADIUS on the same server)
+**Server services**
+- DNS: **Port 53**
+- RADIUS: **Port 1812**
+
+**Clients sending UDP requests**
+- Client 1 (DNS request): **Source Port 49152 → Destination Port 53**
+- Client 2 (RADIUS auth request): **Source Port 51152 → Destination Port 1812**
+
+#### UDP request destination ports (key idea)
+Clients request the UDP server to use **well-known / registered ports** as the **destination port**.
+
+#### UDP request source ports (key idea)
+Clients typically use **random/dynamic ports** as the **source port** (example: 49152 and 51152).
+
+#### UDP response destination (key idea)
+When responding, the server uses the **client’s request source port** as the **destination port**:
+- Server DNS response: **Source Port 53 → Destination Port 49152**
+- Server RADIUS response: **Source Port 1812 → Destination Port 51152**
+
+#### UDP response source ports (key idea)
+The **source ports** in the server responses are the **original destination ports** from the requests (well-known/registered ports):
+- DNS uses **53** as source
+- RADIUS uses **1812** as source
+
+---
+
+## 14.7.5 Check Your Understanding — UDP Communication
+
+### Question 1
+**Why is UDP desirable for protocols that make a simple request and reply transactions?**
+- Reliability  
+- Flow Control  
+- Low overhead  
+- Same-order delivery  
+
+> **Answer:** Low overhead
+
+### Question 2
+**Which UDP datagram reassembly statement is true?**
+- UDP does not reassemble the data.  
+- UDP reassembles the data in the order that it was received.  
+- UDP reassembles the data using sequence numbers.  
+- UDP reassembles the data using control bits.  
+
+> **Answer:** UDP reassembles the data in the order that it was received.
+
+### Question 3
+**Which of the following would be valid source and destination ports for a host connecting to a DNS server?**
+- Source: 53, Destination: 49152  
+- Source: 49152, Destination: 1812  
+- Source: 1812, Destination: 49152  
+- Source: 49152, Destination: 53  
+
+> **Answer:** Source: 49152, Destination: 53
+
+---
+
+# 14.8 Module Practice and Quiz
+
+## 14.8.1 Packet Tracer — TCP and UDP Communications
+
+In this activity, you explore:
+- TCP vs UDP behavior
+- Multiplexing (multiple conversations sharing the network)
+- How **port numbers** determine which local application requested/sent the data
+
+> Packet Tracer does **not** score this activity.
+
+### Objectives (from the lab)
+- **Part 1:** Generate Network Traffic in Simulation Mode  
+- **Part 2:** Examine the Functionality of the TCP and UDP Protocols  
+
+---
+
+## Packet Tracer Lab — Quick Walkthrough (structured)
+
+### Part 1 — Generate Traffic in Simulation Mode and View Multiplexing
+
+#### Step 1 — Populate ARP tables (reduce noise later)
+1. Click **MultiServer** → **Desktop** tab → **Command Prompt**
+2. Run:
+   - `ping -n 1 192.168.1.255`
+3. Wait a few seconds (devices reply), then close MultiServer window.
+
+#### Step 2 — Generate HTTP traffic
+1. Switch to **Simulation mode**
+2. Click **HTTP Client** → **Desktop** → **Web Browser**
+3. URL: `192.168.1.254` → click **Go**
+4. PDUs (envelopes) appear → minimize HTTP Client window (don’t close)
+
+#### Step 3 — Generate FTP traffic
+1. Click **FTP Client** → **Desktop** → **Command Prompt**
+2. Run:
+   - `ftp 192.168.1.254`
+3. PDUs appear → minimize (don’t close)
+
+#### Step 4 — Generate DNS traffic
+1. Click **DNS Client** → **Desktop** → **Command Prompt**
+2. Run:
+   - `nslookup multiserver.pt.ptu`
+3. A PDU appears → minimize (don’t close)
+
+#### Step 5 — Generate Email traffic
+1. Click **E-Mail Client** → **Desktop** → **E-Mail**
+2. Compose:
+   - To: `user@multiserver.pt.ptu`
+   - Subject: (your text)
+   - Body: (your text)
+3. Click **Send** → minimize (don’t close)
+
+#### Step 6 — Verify PDUs exist
+You should see PDU entries in the simulation panel for each client.
+
+#### Step 7 — Observe multiplexing with Capture/Forward
+1. Click **Capture/Forward** once → PDUs move to the switch
+2. Click **Capture/Forward** ~6 times → observe traffic from different hosts
+
+**Question prompts**
+- Only one PDU crosses a wire (per direction) at a time — what is this called?
+  - Suggested answer: **multiplexing** (multiple conversations share the network medium)
+- What do different PDU colors mean?
+  - Suggested answer: **different protocols / different PDU types** in the event list
+
+---
+
+### Part 2 — Examine TCP and UDP Protocol Functionality
+
+#### Step 1 — HTTP (TCP) traffic details
+1. Click **Reset Simulation**
+2. Edit Filters → Show None → select **HTTP** and **TCP**
+3. On HTTP Client browser, go to `192.168.1.254`
+4. Click **Capture/Forward** until an HTTP PDU appears
+
+**Question prompts**
+- Why did it take so long for the HTTP PDU to appear?
+  - Suggested answer: TCP must establish a connection (3-way handshake) and may perform ARP first.
+
+Open the PDU → **Outbound PDU Details** → scroll to the **TCP** section.
+
+**More questions**
+- What is the section labeled?
+  - Suggested answer: **TCP**
+- Are these communications reliable?
+  - Suggested answer: **Yes — TCP is reliable**
+- Record: SRC PORT, DEST PORT, SEQUENCE NUM, ACK NUM
+  - (Values vary in Packet Tracer)
+
+**TCP Flags reminder (flag bits mapping used in the lab)**
+- URG | ACK | PSH | RST | SYN | FIN
+
+Question: Which TCP flags are set in this PDU?
+- Typical pattern:
+  - First TCP PDU often sets **SYN** (connection start),
+  - Reply often sets **SYN + ACK**,
+  - Next often sets **ACK**.
+
+Continue Capture/Forward until a PDU with a checkmark returns to HTTP Client → open **Inbound PDU Details**.
+- Compare ports/sequence numbers: ports are typically **reversed** on the return traffic; sequence/ack values advance.
+
+---
+
+#### Step 2 — FTP (TCP) traffic details
+1. On FTP Client Command Prompt:
+   - `ftp 192.168.1.254`
+2. Filters: show only **FTP** and **TCP**
+3. Capture/Forward → open the second PDU → outbound details → TCP section
+
+**Question prompts**
+- Reliable?
+  - Suggested answer: **Yes — TCP**
+- Record SRC PORT, DEST PORT, SEQ, ACK (values vary)
+- Flag field value?
+  - Often shows a handshake/ACK pattern depending on the step.
+
+Keep forwarding until a PDU returns to FTP Client with a checkmark → open it.
+- Compare how ports/sequence numbers change between outbound/inbound and between PDUs.
+
+A later PDU of a different color returns:
+- Open inbound details and scroll past TCP section.
+- “What is the message from the server?”
+  - (Usually an FTP server banner/status message; record exactly what Packet Tracer shows.)
+
+---
+
+#### Step 3 — DNS (UDP) traffic details
+1. Recreate DNS traffic (as in Part 1)
+2. Filters: show only **DNS** and **UDP**
+3. Open the DNS PDU
+
+**Question prompts**
+- What is the Layer 4 protocol?
+  - **UDP**
+- Reliable?
+  - **No — UDP is not reliable**
+- Record SRC PORT and DEST PORT (values vary; dest is commonly 53)
+
+Why are there no sequence/ack numbers?
+- **UDP has no sequencing/acknowledgement fields** like TCP.
+
+Forward until the reply PDU returns (checkmark) → open inbound details:
+- Ports are typically **reversed** on the return traffic.
+
+“What is the last section of the PDU called, and what IP address was returned for `multiserver.pt.ptu`?”
+- Last section is typically **DNS**
+- IP address depends on the Packet Tracer file (record what you see).
+
+---
+
+#### Step 4 — Email (TCP) traffic details
+1. Recreate email traffic (as in Part 1)
+2. Filters: show only **POP3**, **SMTP**, and **TCP**
+3. Open the first PDU → outbound details → last section
+
+**Question prompts**
+- What transport layer protocol does email traffic use?
+  - **TCP**
+- Reliable?
+  - **Yes (TCP)**
+- Record SRC PORT, DEST PORT, SEQ, ACK, flag value (varies)
+
+Forward until a TCP PDU returns to the E-Mail Client (checkmark) → open inbound details:
+- Compare ports/sequence numbers (typically reversed + updated values)
+
+Final questions from the lab:
+- What email protocol is associated with TCP port **25**?
+  - **SMTP**
+- What protocol is associated with TCP port **110**?
+  - **POP3**
+
